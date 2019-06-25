@@ -8,12 +8,11 @@ Scout 11 of 17 national LAB databases for topics of interest
 
 import http.client
 import requests
-import json
-import sys
+import json, csv
+import sys, re
 import matplotlib.pyplot as plt
-from scrapy.spiders import CrawlSpider, Rule
-from scrapy.linkextractors.lxmlhtml import LxmlLinkExtractor
-from scrapy.item import Item, Field
+import datetime
+import scrapy
 
 try:
     query = sys.argv[1]
@@ -113,33 +112,21 @@ def outreach():
 
 outreach()#Find 11 DB's
 
-class amesfield(Item):
-    url= Field()
+# Modded Links
+print("Searching for references to ", query)
 
-class amesspider(CrawlSpider):
-    alpha = (ames + "search/site/" + query)
-    name = 'crawltest'
-    allowed_domains = [ames]
-    start_urls = [alpha]
-    rules = (Rule(LxmlLinkExtractor(allow=()), callback='parse_obj', follow=True),)
+alpha = (ames + "search/site/" + query)
 
-    def parse_obj(self,response):
-        Item = amesfield()
-        Item['url'] = []
-        for link in LxmlLinkExtractor(allow=(),deny = self.allowed_domains).extract_links(response):
-            Item['url'].append(link.url)
-        return Item
-amesspider.parse_obj()
 
-def spider():
-    print("")
-    print("Searching for references to ", query)
+class amesspider(scrapy.Spider):
+    def initrequest():
+        #aq = requests.get(alpha)
+        aqr = yield scrapy.Request(url=alpha, callback=self.parse)
     
-    alpha = (ames + "search/site/" + query)
-    print("    •", alpha)
-    aq = requests.get(alpha)
-    
-    with open('ames-data.txt', 'w') as file:
-        file.write(aq.text)
+    def parse(self, response):
+        emails = re.findall(r'[\w\.-]+@[\w\.-]+', response.body)
+        with open("emails.csv","w+") as my_csv:
+            csvWriter = csv.writer(my_csv,delimiter=',')
+            csvWriter.writerows(emails)
 
-#spider()#Release the spider
+amesspider.initrequest()#Release the spider
