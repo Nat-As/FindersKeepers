@@ -119,24 +119,32 @@ print("Searching for references to ", query)
 alpha = (ames + "search/site/" + query)
 
 
-class amesspider(scrapy.Spider):
+class amesprespider(scrapy.Spider):
     name = "ames-client"
-    def start_requests(self):
-        #aq = requests.get(alpha)
-        aqr = yield scrapy.Request(url=alpha, callback=self.parse)
-    
+    start_urls = [alpha]
+
     def parse(self, response):
+        # Get Links
+        SET_SELECTOR = '.set'
+        NEXT_PAGE_SELECTOR = '.next a ::attr(href)'
+        next_page = response.css(NEXT_PAGE_SELECTOR).extract_first()
+        if next_page:
+            yield scrapy.Request(response.urljoin(next_page), callback=self.parse)
+        
+        # Get Emails
         emails = re.findall(r'[\w\.-]+@[\w\.-]+', str(response.body))
-        print("Printing: ", emails)
+        for i in range(len(emails)):
+            print("•", emails[i])
         with open("emails.csv","w+") as my_csv:
             csvWriter = csv.writer(my_csv,delimiter=',')
-            csvWriter.writerows(emails)
+            for i in range(len(emails)):
+                csvWriter.writerows(emails[i])
         return emails
-
-process = CrawlerProcess({
+        
+preprocess = CrawlerProcess({
     'USER_AGENT': 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)'
 })
 
-process.crawl(amesspider)
-process.start()
+preprocess.crawl(amesprespider)
+preprocess.start()
 exit()
