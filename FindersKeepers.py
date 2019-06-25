@@ -13,6 +13,7 @@ import sys, re
 import matplotlib.pyplot as plt
 import datetime
 import scrapy
+from scrapy.crawler import CrawlerProcess#daemon
 
 try:
     query = sys.argv[1]
@@ -119,14 +120,23 @@ alpha = (ames + "search/site/" + query)
 
 
 class amesspider(scrapy.Spider):
-    def initrequest():
+    name = "ames-client"
+    def start_requests(self):
         #aq = requests.get(alpha)
         aqr = yield scrapy.Request(url=alpha, callback=self.parse)
     
     def parse(self, response):
-        emails = re.findall(r'[\w\.-]+@[\w\.-]+', response.body)
+        emails = re.findall(r'[\w\.-]+@[\w\.-]+', str(response.body))
+        print("Printing: ", emails)
         with open("emails.csv","w+") as my_csv:
             csvWriter = csv.writer(my_csv,delimiter=',')
             csvWriter.writerows(emails)
+        return emails
 
-amesspider.initrequest()#Release the spider
+process = CrawlerProcess({
+    'USER_AGENT': 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1)'
+})
+
+process.crawl(amesspider)
+process.start()
+exit()
